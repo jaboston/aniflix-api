@@ -1,5 +1,5 @@
 var imported = document.createElement('script')
-;(imported.src = 'js/modal.js'), document.head.appendChild(imported)
+;(imported.src = 'frontend/dist/js/modal.minify.js'), document.head.appendChild(imported)
 var $listItem = document.querySelector('.project-grid__item')
 var pokemonRepository = (function () {
   'use strict'
