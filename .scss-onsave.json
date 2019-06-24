@@ -1,0 +1,10 @@
+{
+    "inputDir": "public/frontend/css/",
+    "outputDir": "public/frontend/css/",
+    "useNpmSass": true,
+    "style":"compressed",
+    "sourcemap":"none",
+    "showStartup":false,
+    "showOutput":false,
+    "showError":true
+}
