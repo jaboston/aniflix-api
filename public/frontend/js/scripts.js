@@ -9,7 +9,7 @@ document.head.appendChild(imported)
 // reference our list item for cloning.
 var $listItem = document.querySelector('.project-grid__item')
 
-var pokemonRepository = (function() {
+var pokemonRepository = (function () {
   'use strict'
   // API constant
   var MAX_POKEMONS = 150
@@ -29,30 +29,30 @@ var pokemonRepository = (function() {
     SITE_PARAMETER_LIMIT +
     MAX_POKEMONS
 
-  function loadDetails(pokemon) {
+  function loadDetails (pokemon) {
     var url = pokemon.detailsUrl
-    return $.get(url, function() {
-        console.log('getting details from ' + url)
-      })
-      .done(function(details) {
+    return $.get(url, function () {
+      console.log('getting details from ' + url)
+    })
+      .done(function (details) {
         // Now we add the details to the item
         pokemon.imageUrl = details.sprites.front_default
         pokemon.height = details.height
         pokemon.types = details.types
         return pokemon
       })
-      .fail(function(e) {
+      .fail(function (e) {
         console.error(e)
       })
   }
 
-  function loadList() {
+  function loadList () {
     return fetch(apiUrl)
-      .then(function(response) {
+      .then(function (response) {
         return response.json()
       })
-      .then(function(json) {
-        json.results.forEach(function(item) {
+      .then(function (json) {
+        json.results.forEach(function (item) {
           console.log(item)
           var pokemon = {
             name: item.name,
@@ -63,7 +63,7 @@ var pokemonRepository = (function() {
           add(pokemon)
         })
       })
-      .catch(function(e) {
+      .catch(function (e) {
         console.error(e)
       })
       // once we know we have added all the available pokemons, it is safe to delete our original $pokemonTemplatedItem
@@ -71,7 +71,7 @@ var pokemonRepository = (function() {
       // $listItem.parentElement.removeChild($listItem);
   }
 
-  function add(pokemon) {
+  function add (pokemon) {
     // check every value explicitly. Make sure there is no monkey business.
     if (
       typeof pokemon.height === typeof 0 &&
@@ -85,11 +85,11 @@ var pokemonRepository = (function() {
 
   return {
     add: add,
-    getAll: function() {
+    getAll: function () {
       return repository
     },
     // returns the object for the pokemon name that you want.
-    filter: function(name) {
+    filter: function (name) {
       return repository.filter(value => value.name === name)
     },
     loadList: loadList,
@@ -97,8 +97,8 @@ var pokemonRepository = (function() {
   }
 })()
 
-function showDetails(pokemon) {
-  pokemonRepository.loadDetails(pokemon).then(function() {
+function showDetails (pokemon) {
+  pokemonRepository.loadDetails(pokemon).then(function () {
     console.log(
       'name: ' +
       pokemon.name +
@@ -127,7 +127,7 @@ function showDetails(pokemon) {
   })
 }
 
-function addListItem(pokemon) {
+function addListItem (pokemon) {
   // check the values are legit
   if (typeof pokemon.height === typeof 0 && typeof pokemon.name === typeof '') {
     // clone our list item.
@@ -149,7 +149,7 @@ function addListItem(pokemon) {
       $pokemonTemplatedItem.firstElementChild
     )
 
-    $pokemonTemplatedButton.addEventListener('click', function() {
+    $pokemonTemplatedButton.addEventListener('click', function () {
       // we need to referenence a pokemon outside of this function just above.
       console.log('show details')
       showDetails(pokemon)

@@ -7,9 +7,19 @@ const express = require('express')
 const bodyParser = require('body-parser')
 // uuid package for generating uuids
 const uuid = require('uuid')
-
 // the morgan import
 const morgan = require('morgan')
+// the mongoose import (for our ORM)
+const mongoose = require('mongoose')
+// reference our backend ORM js file.
+const Models = require('./public/backend/js/models.js')
+
+// create new constants for our movies and users
+const Movies = Models.Movie
+const Users = Models.User
+
+// connect to mongo db via mongoose. useNewUrlParser: true required because of deprecation of old parsing method.
+mongoose.connect('mongodb://localhost:27017/AniflixDB', { useNewUrlParser: true })
 
 // the instantiated express client
 const app = express()
@@ -140,67 +150,244 @@ app.get('/documentation', function(req, res) {
 
 // Return a list of ALL animes to the user
 app.get('/animes', function(req, res) {
-  res.json(topAnimes).status(200)
+  Movies.find().then((movies) => {
+    res.json(movies).status(200)
+  })
 })
 
 // Return data (description, genre, director, image URL, whether it’s featured or not) about a single anime by title to the user
 app.get('/animes/:title', (req, res) => {
   // not sure if I like wrapping the response like this or being able to modify the response right until the end.
-  res.json(topAnimes.find((animeItem) => {
+  Movies.findOne(
+    { Title: req.params.title }).then((animeItem) => {
     console.log(animeItem)
-    // if the title is the same as the queried name, then return the true.
-    if (animeItem.title === req.params.title)
-      return animeItem
-    else res.status(404).send('anime item not found with title')
-  }))
+
+    // if the item cannot be found, return nothing otherwise give us the found anime item.
+    if (animeItem != null) {
+        res.status(201).json(animeItem)
+    }
+    else {
+      res.status(404).send('anime item not found with title')
+    }
+  }).catch(function(err) {
+    console.error(err)
+    res.status(500).send('Error: ' + err)
+  })
 })
 
 // Return data about a genre (description) by name/title (e.g., “Thriller”)
 app.get('/animes/:title/genre', (req, res) => {
-  topAnimes.find((animeItem) => {
-    // if the genrekey is genre then return the animeItems genre
-    if (req.params.title === animeItem.title)
-      res.json(animeItem.genre)
-  }
-  )
+  Movies.findOne({ Title: req.params.title }).then((animeItem) => {
+    if (animeItem) {
+      // if the genrekey is genre then return the animeItems genre
+      res.status(200).json(animeItem.Genre)
+    } else {
+      res.status(404).send('anime item not found with title')
+    }
+  }).catch(function(err) {
+    console.error(err)
+    res.status(500).send('Error: ' + err)
+  })
 })
 
 //Return data about a director (bio, birth year, death year) by name
 app.get('/animes/:title/director', (req, res) => {
-  topAnimes.find((animeItem) => {
-    console.log('checking director for title ' + animeItem.title)
-    // if the genrekey is genre then return the animeItems genre
-    if (animeItem.title === req.params.title)
-      res.json(animeItem.director)
+  Movies.findOne({ Title: req.params.title }).then((animeItem) => {
+    // if the anime item exists continue otherwise 404
+    if (animeItem) {
+      console.log('checking director for title ' + animeItem.Title)
+      // if the director exists, continue, otherwise 404
+      if (animeItem.Director != null) {
+        // return a success status with the director
+        res.status(200).json(animeItem.Director)
+      } else {
+        res.status(404).send('Director not found for movie. It is likely that the director has not been added for the movie')
+      }
+    } else {
+      res.status(404).send('Movie with title not found. It is likely that a movie does not exist with that name')
+    }
   })
+})
+
+// Find all users
+app.get('/users', function(req, res) {
+  // dont allow a public API to provide a password silly.
+  Users.find().select('-password').select('-Password')
+  .then(
+    function(users) {
+      res.status(201).json(users)
+    }
+  )
+  .catch(
+    function(err) {
+      console.error(err)
+      res.status(500).send('Error: ' + err)
+    }
+  )
+})
+
+// Find user by username
+app.get('/users/:username', function(req, res) {
+  Users.findOne({ Username : req.params.username }).select('-password').select('-Password')
+  .then(
+    function(user) {
+      console.log(user)
+    res.status(201).json(user)
+    }
+  )
+  .catch(
+    function(err) {
+      console.error(err)
+      res.status(500).send('Error: ' + err)
+    }
+  )
+})
+
+// Update user by username
+app.put('/users/:username', function(req, res) {
+  Users.findOneAndUpdate({ Username: req.params.username },
+  {
+    $set:
+    {
+      Username: req.params.username,
+      Password: req.body.Password,
+      Email: req.body.Email,
+      Birthday: req.body.Birthday,
+      Name: req.body.Name
+    }
+  },
+  { new: true },
+    function(err, updatedUser) {
+      if (err) {
+        console.log(err)
+      } else {
+        res.status(201).json(updatedUser)
+      }
+    }
+  ).select('-password').select('-Password')
 })
 
 // Allow new users to register
 app.post('/register', (req, res) => {
-  if (req.body.name &&
-  (req.body.email ||
-  req.body.otherloginid)) {
-    var regexEmail = RegExp('^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+.[a-zA-Z0-9-.]+$')
-    if (regexEmail.test(req.body.email) || req.body.otherloginid) {
-      // todo - add logic to store new user here
-      res.status(201).send('successfully registered with the following email: ' + req.body.email + ' and name: ' + req.body.name)
+  Users.findOne({ Username: req.body.username })
+  .then(
+    function(user) {
+      if (user) {
+        return res.status(400).send(req.body.username + 'already exists')
+      } else {
+        if (req.body.name &&
+        (req.body.email ||
+        req.body.otherloginid)) {
+          var regexEmail = RegExp('^[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+.[a-zA-Z0-9-.]+$')
+          if (regexEmail.test(req.body.email) || req.body.otherloginid) {
+            Users.create(
+              { Authkey: uuid.v4(),
+                Username: req.body.username,
+                Password: req.body.password,
+                Email: req.body.email,
+                Birthday: req.body.birthday,
+                Name: req.body.name })
+            res.status(201).send('successfully registered with the following email: ' + req.body.email + ' and name: ' + req.body.name)
+          }
+        } else {
+            res.status(400).send('failed to register because not all details were found')
+        }
+      }
     }
-  } else {
-      res.status(400).send('failed to register because not all details were found')
-  }
+  ).catch(
+    function(error) {
+      console.error(error)
+      res.status(500).send('Error: ' + error)
+    }
+  )
 })
 
-function isAuthed(userid, authkey) {
-  // todo - add logic here to auth the user.
+// Add a movie to a user's lsit of FavouriteMovies
+app.post('/users/:username:/movies/:movieid',
+  function(req, res) {
+    Users.findOneAndUpdate(
+      {
+        Username: req.params.username
+      },
+      {
+        $push:
+        {
+          FavouriteMovies: req.params.movieid
+        }
+      },
+      {
+        new: true
+      },
+      function (err, updatedUser) {
+        if (err) {
+        console.error(err)
+        res.status(500).send('Error: ' + err)
+      } else {
+        res.json(updatedUser)
+      }
+      }
+    )
+  }
+)
+
+// Delete a user by username
+app.delete('/users/:username', (req, res) =>
+  {
+    Users.findOneAndRemove(
+      { Username: req.params.username }
+    ).then((user) => {
+      if (!user) {
+        res.status(404).send(req.param.username + ' was not found.')
+      } else {
+        res.status(200).send(req.params.username + ' was deleted successfully.')
+      }
+    }).catch((err) =>
+      {
+        console.error(err)
+        res.status(500).send('Error: ' + err)
+      }
+    )
+  }
+)
+
+function isAuthed(username, authkey) {
+  Users.findOne(
+    { Authkey: authkey, Username: username }
+  ).then((user) => {
+      if (user) return true
+      else return false
+  }
+  )
   return true
 }
 
 // Allow users to update their user info (username, password, email, date of birth)
-app.put('/update/:userid', (req, res) => {
+app.put('/update/:username', (req, res) => {
   let reqBody = req.body
-  if (isAuthed(req.params.userid, req.body.auth_token)) {
-    // todo - actually update user information to some db.
-    res.status(201).send('successfully updated user information')
+  if (isAuthed(req.params.username, req.body.authkey)) {
+    Users.findOne({ Username: req.params.username, Authkey: req.body.authkey }).then(
+      function(user) {
+        if (user) {
+          Users.updateOne({ Username: req.params.username },
+            { $set:
+              { 'Username': req.params.username ? req.params.username : user.Username,
+                'Email': req.body.Email ? req.body.Email : user.Email,
+                'Birthday': req.body.Birthday ? req.body.Birthday : user.Birthday,
+                'Name': req.body.Name ? req.body.Name : user.Name
+              }
+            }
+          )
+          res.status(201).send('successfully updated user information')
+        } else {
+          res.status(403).send('forbidden. the user either does not exist or you are not autorized.')
+        }
+      }
+
+      // Users.findOneAndUpdate(
+      //   { Username: req.params.username, Authkey: req.body.authkey },
+      //   { $push: { 'Username': req.body.username ? req.body.username : Username, 'Email': req.body.email ? req.body.email : Email, 'Birthday': req.body.birthday ? req.body.birthday : Birthday } }
+      // )
+    )
   } else {
     res.status(400).send('failed to update the user information. auth token does not match against id')
   }
@@ -210,26 +397,68 @@ app.put('/update/:userid', (req, res) => {
 app.post('/animes/new', (req, res) => {
   let newAnimeItem = req.body
   console.log(req.body)
-  if (!newAnimeItem.title) {
+  if (!newAnimeItem.Title) {
     const message = 'missing title of anime. You must atleast have a title if you want to add a new anime.'
     res.status(400).send(message)
   } else {
-    newAnimeItem.id = uuid.v4()
-    topAnimes.push(newAnimeItem)
-    // todo - actually update our anime list with new anime using some persistent db of sorts.
-    res.status(201).send('new anime added: ' + JSON.stringify(newAnimeItem) + ' by user id: ' + newAnimeItem.userid)
+    newAnimeItem._id = uuid.v4()
+    Movies.findOne({ Title: newAnimeItem.Title })
+    .then(
+      function(movie) {
+        if (movie) {
+          res.status(400).send('cannot add new item. item with title already exists!')
+        } else {
+          Movies
+          .create(
+            new Models.Movie(
+              {
+                  Genre: req.body.Genre,
+                  Title: req.body.Title,
+                  Description: req.body.Description,
+                  Director: req.body.Director,
+                  ImagePath: req.body.ImagePath,
+                  Featured: req.body.Featured
+              }
+            )
+          )
+          .then(function(movie) { res.status(201).json(movie) })
+          .catch(
+            function (err) {
+              console.log(err)
+              res.status(500).send('Error: ' + err)
+            }
+          )
+        }
+      }
+    )
   }
 })
 
 // delete an anime from our list by ID
-app.delete('/animes/delete/:id', (req, res) => {
-  let animeItem = topAnimes.find((animeItem) => {
-    console.log('anime item id:' + animeItem.id + ' ,params id:' + req.params.id)
-      if (animeItem.id == req.params.id) {
-          // todo - actually remove thee anime from the persistent storage method.
-          res.status(201).send('Anime ' + req.params.id + 'was removed permanently.')
+app.delete('/animes/delete/:title', (req, res) => {
+  // let animeItem = topAnimes.find((animeItem) => {
+  //   console.log('anime item id:' + animeItem.id + ' ,params id:' + req.params.id)
+  //     if (animeItem.id == req.params.id) {
+  //         // todo - actually remove thee anime from the persistent storage method.
+  //         res.status(201).send('Anime ' + req.params.id + 'was removed permanently.')
+  //     }
+  // })
+  Movies.findOneAndRemove(
+    { Title: req.params.title }
+  ).then(
+    function(anime) {
+      if (!anime) {
+        res.status(400).send('anime was not found for title: ' + req.params.title)
+      } else {
+        res.status(200).send(req.params.title + 'deleted from database.')
       }
-  })
+    }
+  ).catch(
+    function (err) {
+      console.log(err)
+      res.status(500).send('Error: ' + err)
+    }
+  )
 })
 
 app.delete('/updategdpr/:userid', (req, res) => {
