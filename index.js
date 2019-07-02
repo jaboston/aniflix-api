@@ -303,7 +303,7 @@ app.post('/register', (req, res) => {
 })
 
 // Add a movie to a user's lsit of FavouriteMovies
-app.post('/users/:username:/movies/:movieid',
+app.post('/users/:username/animes/:movieid',
   function(req, res) {
     Users.findOneAndUpdate(
       {
@@ -311,6 +311,34 @@ app.post('/users/:username:/movies/:movieid',
       },
       {
         $push:
+        {
+          FavouriteMovies: req.params.movieid
+        }
+      },
+      {
+        new: true
+      },
+      function (err, updatedUser) {
+        if (err) {
+        console.error(err)
+        res.status(500).send('Error: ' + err)
+      } else {
+        res.json(updatedUser)
+      }
+      }
+    )
+  }
+)
+
+// delete a movie to a user's lsit of FavouriteMovies
+app.delete('/users/:username/animes/:movieid',
+  function(req, res) {
+    Users.findOneAndUpdate(
+      {
+        Username: req.params.username
+      },
+      {
+        $pull:
         {
           FavouriteMovies: req.params.movieid
         }
