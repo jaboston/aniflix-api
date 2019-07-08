@@ -11,6 +11,9 @@ const uuid = require('uuid')
 const morgan = require('morgan')
 // the mongoose import (for our ORM)
 const mongoose = require('mongoose')
+// our passport library for authentication and rules
+const passport = require('passport')
+
 // reference our backend ORM js file.
 const Models = require('./public/backend/js/models.js')
 
@@ -32,6 +35,9 @@ app.use(bodyParser.urlencoded({ extended: false }))
 
 // parse application/json
 app.use(bodyParser.json())
+
+var auth = require('./public/backend/js/auth.js')(app)
+require('./public/backend/js/passport.js')
 
 // this indicates that the express app should use the 'common' config of morgan which logs basic data such as IP address, the time of the request, the request method and path
 app.use(morgan('common'))
@@ -149,14 +155,14 @@ app.get('/documentation', function(req, res) {
 })
 
 // Return a list of ALL animes to the user
-app.get('/animes', function(req, res) {
+app.get('/animes', passport.authenticate('jwt', { session: false }), function(req, res) {
   Movies.find().then((movies) => {
     res.json(movies).status(200)
   })
 })
 
 // Return data (description, genre, director, image URL, whether it’s featured or not) about a single anime by title to the user
-app.get('/animes/:title', (req, res) => {
+app.get('/animes/:title', passport.authenticate('jwt', { session: false }), (req, res) => {
   // not sure if I like wrapping the response like this or being able to modify the response right until the end.
   Movies.findOne(
     { Title: req.params.title }).then((animeItem) => {
@@ -176,7 +182,7 @@ app.get('/animes/:title', (req, res) => {
 })
 
 // Return data about a genre (description) by name/title (e.g., “Thriller”)
-app.get('/animes/:title/genre', (req, res) => {
+app.get('/animes/:title/genre', passport.authenticate('jwt', { session: false }), (req, res) => {
   Movies.findOne({ Title: req.params.title }).then((animeItem) => {
     if (animeItem) {
       // if the genrekey is genre then return the animeItems genre
@@ -191,7 +197,7 @@ app.get('/animes/:title/genre', (req, res) => {
 })
 
 //Return data about a director (bio, birth year, death year) by name
-app.get('/animes/:title/director', (req, res) => {
+app.get('/animes/:title/director', passport.authenticate('jwt', { session: false }), (req, res) => {
   Movies.findOne({ Title: req.params.title }).then((animeItem) => {
     // if the anime item exists continue otherwise 404
     if (animeItem) {
@@ -210,7 +216,8 @@ app.get('/animes/:title/director', (req, res) => {
 })
 
 // Find all users
-app.get('/users', function(req, res) {
+app.get('/users', passport.authenticate('jwt', { session: false }), function(req, res) {
+  if (req.user.Username == 'admin')
   // dont allow a public API to provide a password silly.
   Users.find().select('-password').select('-Password')
   .then(
@@ -224,11 +231,14 @@ app.get('/users', function(req, res) {
       res.status(500).send('Error: ' + err)
     }
   )
+  else res.status(401).send('Unauthorized')
 })
 
 // Find user by username
-app.get('/users/:username', function(req, res) {
-  Users.findOne({ Username : req.params.username }).select('-password').select('-Password')
+app.get('/users/:username', passport.authenticate('jwt', { session: false }), function(req, res) {
+// if the username is the admin or if the username is the user requesting the user details.
+  if (req.user.Username == 'admin' || req.user.Username == req.params.username)
+  Users.findOne({ Username: req.params.username }).select('-password').select('-Password')
   .then(
     function(user) {
       console.log(user)
@@ -241,10 +251,13 @@ app.get('/users/:username', function(req, res) {
       res.status(500).send('Error: ' + err)
     }
   )
+  else res.status(401).send('Unauthorized')
 })
 
 // Update user by username
-app.put('/users/:username', function(req, res) {
+app.put('/users/:username', passport.authenticate('jwt', { session: false }), function(req, res) {
+  console.log('/users/:username with username ' + req.user.username)
+  if (req.user.Username === 'admin' || req.user.params.username === req.user.Username)
   Users.findOneAndUpdate({ Username: req.params.username },
   {
     $set:
@@ -265,6 +278,7 @@ app.put('/users/:username', function(req, res) {
       }
     }
   ).select('-password').select('-Password')
+  else res.status(401).send('Unauthorized')
 })
 
 // Allow new users to register
@@ -304,7 +318,9 @@ app.post('/register', (req, res) => {
 
 // Add a movie to a user's lsit of FavouriteMovies
 app.post('/users/:username/animes/:movieid',
+passport.authenticate('jwt', { session: false }),
   function(req, res) {
+    if (req.user.Username == 'admin' || req.user.params.username === req.user.Username)
     Users.findOneAndUpdate(
       {
         Username: req.params.username
@@ -327,12 +343,15 @@ app.post('/users/:username/animes/:movieid',
       }
       }
     )
+    else res.status(401).send('Unauthorized')
   }
 )
 
 // delete a movie to a user's lsit of FavouriteMovies
 app.delete('/users/:username/animes/:movieid',
+passport.authenticate('jwt', { session: false }),
   function(req, res) {
+    if (req.user.Username == 'admin' || req.user.params.username === req.user.Username)
     Users.findOneAndUpdate(
       {
         Username: req.params.username
@@ -355,12 +374,14 @@ app.delete('/users/:username/animes/:movieid',
       }
       }
     )
+    else res.status(401).send('Unauthorized')
   }
 )
 
 // Delete a user by username
-app.delete('/users/:username', (req, res) =>
+app.delete('/users/:username', passport.authenticate('jwt', { session: false }), (req, res) =>
   {
+    if (req.user.Username == 'admin')
     Users.findOneAndRemove(
       { Username: req.params.username }
     ).then((user) => {
@@ -375,6 +396,7 @@ app.delete('/users/:username', (req, res) =>
         res.status(500).send('Error: ' + err)
       }
     )
+    else res.status(401).send('Unauthorized')
   }
 )
 
@@ -390,9 +412,9 @@ function isAuthed(username, authkey) {
 }
 
 // Allow users to update their user info (username, password, email, date of birth)
-app.put('/update/:username', (req, res) => {
+app.put('/update/:username', passport.authenticate('jwt', { session: false }), (req, res) => {
   let reqBody = req.body
-  if (isAuthed(req.params.username, req.body.authkey)) {
+  if (req.user.Username == 'admin' || req.user.params.username === req.user.Username) {
     Users.findOne({ Username: req.params.username, Authkey: req.body.authkey }).then(
       function(user) {
         if (user) {
@@ -422,7 +444,7 @@ app.put('/update/:username', (req, res) => {
 })
 
 // posts a new anime to our animes list
-app.post('/animes/new', (req, res) => {
+app.post('/animes/new', passport.authenticate('jwt', { session: false }), (req, res) => {
   let newAnimeItem = req.body
   console.log(req.body)
   if (!newAnimeItem.Title) {
@@ -463,7 +485,7 @@ app.post('/animes/new', (req, res) => {
 })
 
 // delete an anime from our list by ID
-app.delete('/animes/delete/:title', (req, res) => {
+app.delete('/animes/delete/:title', passport.authenticate('jwt', { session: false }), (req, res) => {
   // let animeItem = topAnimes.find((animeItem) => {
   //   console.log('anime item id:' + animeItem.id + ' ,params id:' + req.params.id)
   //     if (animeItem.id == req.params.id) {
@@ -489,8 +511,8 @@ app.delete('/animes/delete/:title', (req, res) => {
   )
 })
 
-app.delete('/updategdpr/:userid', (req, res) => {
-  if (isAuthed(req.params.userid, req.body.auth_token)) {
+app.delete('/updategdpr/:userid', passport.authenticate('jwt', { session: false }), (req, res) => {
+  if (req.user.Username == 'admin' || req.user.params.username === req.user.Username) {
     //todo - actually put in some proper auth and deletion here.
     res.status(200).send('Successfully deleted all user data including account for user ' + req.body.userid)
   } else {
@@ -499,10 +521,10 @@ app.delete('/updategdpr/:userid', (req, res) => {
 })
 
 // Update the year and director of an anime in reference to its name
-app.put('/animes/:title/:year/:director', (req, res) => {
+app.put('/animes/:title/:year/:director', passport.authenticate('jwt', { session: false }), (req, res) => {
   let animeItem = topAnimes.find((animeItem) => { return animeItem.title === req.params.title })
 
-  if (animeItem && isAuthed(req.body.userid, req.body.auth_token)) {
+  if (animeItem && req.user.Username == 'admin') {
     animeItem.director = req.params.director
     animeItem.year = req.params.year
     if (req.body.description) {
@@ -516,20 +538,22 @@ app.put('/animes/:title/:year/:director', (req, res) => {
 })
 
 // Update the description of an anime by id
-app.put('/animes/:id', (req, res) => {
-  let animeItem = topAnimes.find((animeItem) => {
-    return animeItem.id == req.params.id })
-  if (animeItem) {
-    let reqBody = req.body
-    animeItem.description = req.body.description
-    res.status(201).send('description updated for anime ' + animeItem.title + ' with id ' + animeItem.id)
-  } else {
-    res.status(400).send('Anime not found for id ' + req.params.id)
-  }
+app.put('/animes/:id', passport.authenticate('jwt', { session: false }), (req, res) => {
+  if (req.user.Username == 'admin') {
+    let animeItem = topAnimes.find((animeItem) => {
+      return animeItem.id == req.params.id })
+    if (animeItem) {
+      let reqBody = req.body
+      animeItem.description = req.body.description
+      res.status(201).send('description updated for anime ' + animeItem.title + ' with id ' + animeItem.id)
+    } else {
+      res.status(400).send('Anime not found for id ' + req.params.id)
+    }
+ } else { res.status(401).send('Unauthorized') }
 })
 
 // GET the description of the anime by title
-app.get('/animes/:title/:description', (req, res) => {
+app.get('/animes/:title/:description', passport.authenticate('jwt', { session: false }), (req, res) => {
   let animeItem = topAnimes.find((animeItem) => { return animeItem.title == req.params.title })
 
   if (animeItem) {
