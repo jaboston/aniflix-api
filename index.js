@@ -12,7 +12,7 @@ const morgan = require('morgan')
 // the mongoose import (for our ORM)
 const mongoose = require('mongoose')
 // our passport library for authentication and rules
-const passport = require('passport')
+var passport = require('passport')
 // cross origin resource sharing
 const cors = require('cors')
 
