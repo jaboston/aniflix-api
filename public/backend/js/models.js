@@ -2,6 +2,9 @@
 
 const mongoose = require('mongoose')
 
+// bcrypt for encrypting passwords, required for our user model
+const bcrypt = require('bcrypt')
+
 var movieSchema = mongoose.Schema(
   {
     Title: { type: String, required: true },
@@ -35,6 +38,16 @@ var userSchema = mongoose.Schema(
     Director: { type: String, required: false }
   }
 )
+
+// hash the password
+userSchema.statics.hashPassword = function (password) {
+  return bcrypt.hashSync(password, 10)
+}
+
+// compare submitted hashed password with password in // DEBUG: userSchema.methods.validatePassword = function(password) {
+userSchema.methods.validatePassword = function (password) {
+  return bcrypt.compareSync(password, this.Password)
+}
 
 var Movie = mongoose.model('Movie', movieSchema)
 var User = mongoose.model('User', userSchema)

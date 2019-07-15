@@ -13,6 +13,8 @@ const morgan = require('morgan')
 const mongoose = require('mongoose')
 // our passport library for authentication and rules
 const passport = require('passport')
+// cross origin resource sharing
+const cors = require('cors')
 
 // reference our backend ORM js file.
 const Models = require('./public/backend/js/models.js')
@@ -35,6 +37,30 @@ app.use(bodyParser.urlencoded({ extended: false }))
 
 // parse application/json
 app.use(bodyParser.json())
+
+// use cross origin resource sharing
+app.use(cors())
+
+// field validation for express
+var exValidator = require('express-validator')
+// use validator for express
+app.use(exValidator())
+
+// update this with real website once hosted.
+var allowedOrigins = ['http://localhost:8080', 'http://testsite.com']
+
+app.use(
+  cors({
+    origin: function(origin, callback) {
+      if (!origin) return callback(null, true)
+      if (allowedOrigins.indexOf(origin) === -1) { // If a specific origin isn’t found on the list of allowed origins
+        var message = 'The CORS policy for this application doesn’t allow access from origin ' + origin
+        return callback(new Error(message), false)
+      }
+      return callback(null, true)
+    }
+  })
+)
 
 var auth = require('./public/backend/js/auth.js')(app)
 require('./public/backend/js/passport.js')
@@ -263,10 +289,10 @@ app.put('/users/:username', passport.authenticate('jwt', { session: false }), fu
     $set:
     {
       Username: req.params.username,
-      Password: req.body.Password,
-      Email: req.body.Email,
-      Birthday: req.body.Birthday,
-      Name: req.body.Name
+      Password: req.body.password,
+      Email: req.body.email,
+      Birthday: req.body.birthday,
+      Name: req.body.name
     }
   },
   { new: true },
@@ -283,6 +309,21 @@ app.put('/users/:username', passport.authenticate('jwt', { session: false }), fu
 
 // Allow new users to register
 app.post('/register', (req, res) => {
+  // Validation logic here for request
+ req.checkBody('username', 'Username is required').notEmpty()
+ req.checkBody('username', 'Username contains non alphanumeric characters - not allowed.').isAlphanumeric()
+ req.checkBody('password', 'Password is required').notEmpty()
+ req.checkBody('email', 'Email is required').notEmpty()
+ req.checkBody('email', 'Email does not appear to be valid').isEmail()
+
+ // check the validation object for errors
+  var errors = req.validationErrors()
+
+  if (errors) {
+    return res.status(422).json({ errors: errors })
+  }
+  // create a hashed password for the request body with password
+  var hashedPassword = Users.hashPassword(req.body.password)
   Users.findOne({ Username: req.body.username })
   .then(
     function(user) {
@@ -297,7 +338,7 @@ app.post('/register', (req, res) => {
             Users.create(
               { Authkey: uuid.v4(),
                 Username: req.body.username,
-                Password: req.body.password,
+                Password: hashedPassword,
                 Email: req.body.email,
                 Birthday: req.body.birthday,
                 Name: req.body.name })
@@ -573,6 +614,7 @@ app.get('/secreturl', function (req, res) {
 })
 
 // listen for requests
-app.listen(8080, () =>
-  console.log('Your app is listening on port 8080.')
-)
+var port = process.env.PORT || 3000
+app.listen(port, '0.0.0.0', function() {
+  console.log('Listening on Port 3000')
+})
