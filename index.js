@@ -16,6 +16,9 @@ var passport = require('passport')
 // cross origin resource sharing
 const cors = require('cors')
 
+// environmental variables
+require('dotenv').config()
+
 // reference our backend ORM js file.
 const Models = require('./public/backend/js/models.js')
 
@@ -24,7 +27,7 @@ const Movies = Models.Movie
 const Users = Models.User
 
 // connect to mongo db via mongoose. useNewUrlParser: true required because of deprecation of old parsing method.
-mongoose.connect('mongodb://localhost:27017/AniflixDB', { useNewUrlParser: true })
+mongoose.connect(process.env.MONGO_CLUSTER_URL_USER_PASS, { useNewUrlParser: true })
 
 // the instantiated express client
 const app = express()
