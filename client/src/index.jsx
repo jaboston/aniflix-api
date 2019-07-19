@@ -10,6 +10,11 @@ class MyFlixApplication extends React.Component {
     return (
       <div className="my-flix">
         <div>Good morning</div>
+        <div>How are you?</div>
+        <div>
+          { 1 + 2 === 4 ? 'Math is broken' : 'Math is awesome' }
+        </div>
+        <div className="sidebar" />
       </div>
     );
   }
