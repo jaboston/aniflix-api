@@ -31,6 +31,7 @@
 
 # OS generated files #
 ######################
+
 .DS_Store
 .DS_Store?
 ._*
@@ -42,3 +43,7 @@ Thumbs.db
 # This contains secrets, don't store in source control
 .env
 *.env
+
+# Directories to ignore
+.cache/
+dist/

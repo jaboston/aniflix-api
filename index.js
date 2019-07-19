@@ -50,7 +50,7 @@ var exValidator = require('express-validator')
 app.use(exValidator())
 
 // update this with real website once hosted.
-var allowedOrigins = ['http://localhost:8080', 'http://testsite.com']
+var allowedOrigins = ['http://localhost:8080', 'http://testsite.com', 'http://localhost:1234']
 
 app.use(
   cors({
@@ -184,7 +184,7 @@ app.get('/documentation', function(req, res) {
 })
 
 // Return a list of ALL animes to the user
-app.get('/animes', passport.authenticate('jwt', { session: false }), function(req, res) {
+app.get('/animes', function(req, res) {
   Movies.find().then((movies) => {
     res.json(movies).status(200)
   })
