@@ -184,7 +184,7 @@ app.get('/documentation', function(req, res) {
 })
 
 // Return a list of ALL animes to the user
-app.get('/animes', passport.authenticate('jwt', { session: false }), function(req, res) {
+app.get('/animes', function(req, res) {
   Movies.find().then((movies) => {
     res.json(movies).status(200)
   })
@@ -285,7 +285,6 @@ app.get('/users/:username', passport.authenticate('jwt', { session: false }), fu
 
 // Update user by username
 app.put('/users/:username', passport.authenticate('jwt', { session: false }), function(req, res) {
-
   // Validation logic here for request
  req.checkBody('username', 'Username is required').notEmpty()
  req.checkBody('username', 'Username contains non alphanumeric characters - not allowed.').isAlphanumeric()
