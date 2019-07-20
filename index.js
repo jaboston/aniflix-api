@@ -50,7 +50,7 @@ var exValidator = require('express-validator')
 app.use(exValidator())
 
 // update this with real website once hosted.
-var allowedOrigins = ['http://localhost:8080', 'http://testsite.com']
+var allowedOrigins = ['http://localhost:8080', 'http://testsite.com', '*']
 
 app.use(
   cors({
@@ -285,6 +285,14 @@ app.get('/users/:username', passport.authenticate('jwt', { session: false }), fu
 
 // Update user by username
 app.put('/users/:username', passport.authenticate('jwt', { session: false }), function(req, res) {
+
+  // Validation logic here for request
+ req.checkBody('username', 'Username is required').notEmpty()
+ req.checkBody('username', 'Username contains non alphanumeric characters - not allowed.').isAlphanumeric()
+ req.checkBody('password', 'Password is required').notEmpty()
+ req.checkBody('email', 'Email is required').notEmpty()
+ req.checkBody('email', 'Email does not appear to be valid').isEmail()
+
   console.log('/users/:username with username ' + req.user.username)
   if (req.user.Username === 'admin' || req.user.params.username === req.user.Username)
   Users.findOneAndUpdate({ Username: req.params.username },
@@ -457,6 +465,10 @@ function isAuthed(username, authkey) {
 
 // Allow users to update their user info (username, password, email, date of birth)
 app.put('/update/:username', passport.authenticate('jwt', { session: false }), (req, res) => {
+    // Validation logic here for request
+   req.checkBody('password', 'Password is required').notEmpty()
+   req.checkBody('email', 'Email is required').notEmpty()
+   req.checkBody('email', 'Email does not appear to be valid').isEmail()
   let reqBody = req.body
   if (req.user.Username == 'admin' || req.user.params.username === req.user.Username) {
     Users.findOne({ Username: req.params.username, Authkey: req.body.authkey }).then(
@@ -467,7 +479,8 @@ app.put('/update/:username', passport.authenticate('jwt', { session: false }), (
               { 'Username': req.params.username ? req.params.username : user.Username,
                 'Email': req.body.Email ? req.body.Email : user.Email,
                 'Birthday': req.body.Birthday ? req.body.Birthday : user.Birthday,
-                'Name': req.body.Name ? req.body.Name : user.Name
+                'Name': req.body.Name ? req.body.Name : user.Name,
+                'Password': req.body.Password ? req.body.Password : user.Password
               }
             }
           )
