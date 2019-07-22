@@ -41,29 +41,30 @@ app.use(bodyParser.urlencoded({ extended: false }))
 // parse application/json
 app.use(bodyParser.json())
 
-// use cross origin resource sharing
-app.use(cors())
-
 // field validation for express
 var exValidator = require('express-validator')
 // use validator for express
 app.use(exValidator())
 
-// update this with real website once hosted.
-var allowedOrigins = ['*']
+// use cross origin resource sharing. by default it allows requests from any origin.
+app.use(cors())
 
-app.use(
-  cors({
-    origin: function(origin, callback) {
-      if (!origin) return callback(null, true)
-      if (allowedOrigins.indexOf(origin) === -1) { // If a specific origin isn’t found on the list of allowed origins
-        var message = 'The CORS policy for this application doesn’t allow access from origin ' + origin
-        return callback(new Error(message), false)
-      }
-      return callback(null, true)
-    }
-  })
-)
+// It is an API so we do not need this.
+// // update this with real website once hosted.
+// var allowedOrigins = ['*']
+//
+// app.use(
+//   cors({
+//     origin: function(origin, callback) {
+//       if (!origin) return callback(null, true)
+//       if (allowedOrigins.indexOf(origin) === -1) { // If a specific origin isn’t found on the list of allowed origins
+//         var message = 'The CORS policy for this application doesn’t allow access from origin ' + origin
+//         return callback(new Error(message), false)
+//       }
+//       return callback(null, true)
+//     }
+//   })
+// )
 
 var auth = require('./public/backend/js/auth.js')(app)
 require('./public/backend/js/passport.js')
