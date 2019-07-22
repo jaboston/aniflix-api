@@ -50,7 +50,7 @@ var exValidator = require('express-validator')
 app.use(exValidator())
 
 // update this with real website once hosted.
-var allowedOrigins = ['http://localhost:8080', 'http://testsite.com', '*']
+var allowedOrigins = ['*']
 
 app.use(
   cors({
