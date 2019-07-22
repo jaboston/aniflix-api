@@ -13,14 +13,14 @@ var pokemonRepository = (function () {
   'use strict'
   // API constant
   var MAX_POKEMONS = 150
-    // URL constants
+  // URL constants
   var SITE_PROTOCOL = 'https://'
   var SITE_ADDRESS = 'pokeapi.co/'
   var SITE_API_PATH = 'api/v2/'
   var SITE_ENDPOINT_POKEMON = 'pokemon/'
   var SITE_PARAMETER_LIMIT = '?limit='
   var repository = []
-    // construct our api url.
+  // construct our api url.
   var apiUrl =
     SITE_PROTOCOL +
     SITE_ADDRESS +
@@ -129,7 +129,7 @@ function showDetails (pokemon) {
 
 function addListItem (pokemon) {
   // check the values are legit
-  if (typeof pokemon.height === typeof 0 && typeof pokemon.name === typeof '') {
+  if (typeof pokemon.height === typeof 0 && typeof pokemon.name === typeof '' && $listItem != null) {
     // clone our list item.
     var $pokemonTemplatedItem = $listItem.cloneNode(false)
     var $pokemonTemplatedButton = document
@@ -164,18 +164,18 @@ function addListItem (pokemon) {
 }
 
 // make container visible
-$('.modal').load(
-  'https://jaboston.github.io/alphabet-landingpage-jquery/modal.html'
-)
+// $('.modal').load(
+//   'https://jaboston.github.io/alphabet-landingpage-jquery/modal.html'
+// )
 
 console.log(pokemonRepository.getAll())
 
 // call the loadList function in pokemonRepository which makes a request to the API to fetch and return the list of Pokemon.
-pokemonRepository.loadList().then(function() {
+pokemonRepository.loadList().then(function () {
   // getAll returns pokemon array from pokemon repository then we call the 'forEach' function on the array
   // which then references each object as the object 'pokemon'.
   // it then adds that pokemon as a list item to our UI.
-  pokemonRepository.getAll().forEach(function(pokemon) {
+  pokemonRepository.getAll().forEach(function (pokemon) {
     addListItem(pokemon)
   })
 })
