@@ -1,13 +1,13 @@
-import React from 'react';
-import axios from 'axios';
+import React from 'react'
+import axios  from 'axios'
 
-import { MovieCard } from '../movie-card/movie-card';
-import { MovieView } from '../movie-view/movie-view';
+import { MovieCard } from '../movie-card/movie-card'
+import { MovieView } from '../movie-view/movie-view'
 
 export class MainView extends React.Component {
 
-  constructor() {
-    super();
+  constructor () {
+    super()
 
     this.state = {
       movies: null,
@@ -15,22 +15,21 @@ export class MainView extends React.Component {
     };
   }
 
-  componentDidMount() {
+  componentDidMount () {
     /* ... */
   }
 
-  onMovieClick(movie) {
+  onMovieClick (movie) {
     this.setState({
       selectedMovie: movie
-    });
+    })
   }
 
-
-  render() {
+  render () {
     const { movies, selectedMovie } = this.state;
 
     // Before the movies have been loaded
-    if (!movies) return <div className="main-view"/>;
+    if (!movies) return <div className="main-view" >
 
     return (
      <div className="main-view">
